@@ -1,0 +1,436 @@
+<?php
+session_start();
+if(!isset($_SESSION['username'])){
+  header("Location: login_signup.php");
+  exit();
+}
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI Voice Language Tutor</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Poppins}
+body{background:#0e0e13;color:white;display:flex;min-height:100vh}
+
+/* SIDEBAR */
+.sidebar{
+  width:230px;background:#16161f;padding:25px;display:flex;
+  flex-direction:column;border-right:2px solid #ff6b3d
+}
+.logo-box{display:flex;align-items:center;gap:10px;margin-bottom:30px}
+.logo{width:40px}
+.logo-title{color:#ff6b3d;font-weight:600}
+
+.sidebar a{
+  display:flex;align-items:center;gap:10px;padding:12px;margin:6px 0;
+  border-radius:8px;cursor:pointer;transition:.3s
+}
+.sidebar a:hover,.sidebar a.active{background:#ff6b3d;transform:translateX(5px)}
+
+.logout-btn{
+  margin-top:auto;padding:12px;border:none;border-radius:10px;
+  background:linear-gradient(135deg,#ff3c3c,#ff6b3d);color:white;cursor:pointer
+}
+
+/* MAIN */
+.main{flex:1;padding:40px}
+
+/* CARDS */
+.card{
+  background:#1d1d28;padding:25px;border-radius:12px;margin-top:20px;
+  box-shadow:0 0 15px rgba(255,107,61,0.2)
+}
+
+/* VOICE ORB */
+.voice-orb{
+  width:100px;height:100px;border-radius:50%;
+  background:linear-gradient(135deg,#ff6b3d,#ff9a3d);
+  display:flex;align-items:center;justify-content:center;
+  font-size:35px;margin:20px auto;cursor:pointer;
+  animation:pulse 3s infinite
+}
+@keyframes pulse{
+0%{box-shadow:0 0 0 0 rgba(255,107,61,.5)}
+70%{box-shadow:0 0 0 25px rgba(255,107,61,0)}
+}
+
+/* INPUTS */
+input,select{
+  width:100%;padding:10px;border-radius:8px;border:none;margin-top:10px
+}
+
+button{
+  width:100%;padding:10px;margin-top:10px;border:none;border-radius:8px;
+  background:#ff6b3d;color:white;cursor:pointer
+}
+
+/* CHAT */
+.chat-user{background:#ff6b3d;padding:10px;border-radius:10px;margin:10px 0}
+.chat-ai{background:#333;padding:10px;border-radius:10px;margin:10px 0}
+
+/* STATS */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:20px}
+.stat{background:#242432;padding:20px;border-radius:10px;text-align:center}
+.stat h2{color:#ff6b3d}
+
+/* SECTIONS */
+.section{display:none}
+.section.active{display:block}
+
+.history{margin-top:10px;font-size:14px;opacity:.8}
+
+/* MOBILE */
+@media(max-width:900px){
+.sidebar{width:70px}
+.sidebar span{display:none}
+}
+</style>
+</head>
+
+<body>
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+
+<div class="logo-box">
+<img src="https://cdn-icons-png.flaticon.com/512/4712/4712035.png" class="logo">
+<div class="logo-title">AI Tutor</div>
+</div>
+
+<a class="active" onclick="showSection('dashboard',this)">
+<i class="fa-solid fa-house"></i> <span>Dashboard</span>
+</a>
+
+<a onclick="showSection('practice',this)">
+<i class="fa-solid fa-microphone"></i> <span>Practice</span>
+</a>
+
+<a onclick="showSection('lesson',this)">
+<i class="fa-solid fa-graduation-cap"></i> <span>Lesson</span>
+</a>
+
+<a onclick="showSection('conversation',this)">
+<i class="fa-solid fa-comments"></i> <span>Conversation</span>
+</a>
+
+<a onclick="showSection('exam',this)">
+<i class="fa-solid fa-clipboard-check"></i> <span>Exam</span>
+</a>
+
+<a onclick="showSection('dictionary',this)">
+<i class="fa-solid fa-book"></i> <span>Dictionary</span>
+</a>
+
+<a onclick="showSection('progress',this)">
+<i class="fa-solid fa-chart-line"></i> <span>Progress</span>
+</a>
+
+<button class="logout-btn" onclick="logout()">Logout</button>
+
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+<h1>Hello <?php echo $_SESSION['username']; ?> 👋</h1>
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section active">
+<div class="stats">
+
+<div class="stat">
+<h2 id="streak">0</h2>
+<p>Daily Streak 🔥</p>
+</div>
+
+<div class="stat">
+<h2 id="avgScore">0%</h2>
+<p>Average Score</p>
+</div>
+
+<div class="stat">
+<h2 id="totalPractice">0</h2>
+<p>Practice Sessions</p>
+</div>
+
+</div>
+</div>
+
+<!-- PRACTICE -->
+<div id="practice" class="section">
+<div class="card">
+
+<h3>Voice Practice</h3>
+
+<select id="language">
+<option value="en-US">English</option>
+<option value="hi-IN">Hindi</option>
+<option value="pa-IN">Punjabi</option>
+</select>
+
+<input id="expectedWord" placeholder="Word to practice">
+
+<button onclick="randomWord()">Generate Word</button>
+
+<div class="voice-orb" onclick="startSpeech()">🎤</div>
+
+<p id="result"></p>
+<p id="score"></p>
+
+<button onclick="speak()">Listen Pronunciation</button>
+
+<div id="history" class="history"></div>
+
+</div>
+</div>
+
+<!-- LESSON -->
+<div id="lesson" class="section">
+<div class="card">
+
+<h3>AI Lesson</h3>
+
+<p id="lessonSentence">Click start to learn</p>
+
+<button onclick="startLesson()">Start Lesson</button>
+<button onclick="repeatLesson()">Repeat Sentence</button>
+
+</div>
+</div>
+
+<!-- CONVERSATION -->
+<div id="conversation" class="section">
+<div class="card">
+
+<h3>Conversation Practice</h3>
+
+<button onclick="startConversation()">🎤 Speak</button>
+
+<div id="chat"></div>
+
+</div>
+</div>
+
+<!-- EXAM -->
+<div id="exam" class="section">
+<div class="card">
+
+<h3>Voice Exam Mode</h3>
+
+<p id="examSentence"></p>
+
+<button onclick="startExam()">Start Exam</button>
+<button onclick="answerExam()">Speak Answer</button>
+
+<p id="examScore"></p>
+
+</div>
+</div>
+
+<!-- DICTIONARY -->
+<div id="dictionary" class="section">
+<div class="card">
+
+<h3>Dictionary</h3>
+
+<input id="word" placeholder="Enter word">
+
+<button onclick="searchWord()">Search</button>
+
+<p id="meaning"></p>
+
+<button onclick="speakWord()">Pronounce</button>
+
+</div>
+</div>
+
+<!-- PROGRESS -->
+<div id="progress" class="section">
+<div class="card">
+<canvas id="chart"></canvas>
+</div>
+</div>
+
+</div>
+
+<script>
+
+/* SECTION SWITCH */
+function showSection(id,el){
+document.querySelectorAll(".section").forEach(sec=>sec.classList.remove("active"))
+document.getElementById(id).classList.add("active")
+document.querySelectorAll(".sidebar a").forEach(a=>a.classList.remove("active"))
+el.classList.add("active")
+}
+
+/* LOGOUT */
+function logout(){
+if(confirm("Logout?")) window.location="logout.php"
+}
+
+/* RANDOM WORD */
+const words=["Hello","Morning","Practice","Language","Assistant","Opportunity"]
+function randomWord(){
+let word=words[Math.floor(Math.random()*words.length)]
+document.getElementById("expectedWord").value=word
+}
+
+/* SIMILARITY SCORE */
+function similarity(a,b){
+a=a.toLowerCase()
+b=b.toLowerCase()
+let match=0
+for(let i=0;i<b.length;i++){
+if(a[i]==b[i]) match++
+}
+return Math.floor(match/b.length*100)
+}
+
+/* SPEECH PRACTICE */
+function startSpeech(){
+const recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)()
+recognition.lang=document.getElementById("language").value
+
+recognition.onresult=function(e){
+let spoken=e.results[0][0].transcript
+document.getElementById("result").innerHTML="You said: "+spoken
+
+let expected=document.getElementById("expectedWord").value
+if(expected){
+let score=similarity(spoken,expected)
+document.getElementById("score").innerHTML="Accuracy: "+score+"%"
+updateStats(score)
+}
+}
+
+recognition.start()
+}
+
+/* SPEAK */
+function speak(){
+let text=document.getElementById("expectedWord").value
+let speech=new SpeechSynthesisUtterance(text)
+speech.lang=document.getElementById("language").value
+speechSynthesis.speak(speech)
+}
+
+/* LESSON */
+const lessons=[
+"Hello how are you",
+"I am learning English",
+"Practice makes perfect"
+]
+
+let currentLesson=""
+
+function startLesson(){
+currentLesson=lessons[Math.floor(Math.random()*lessons.length)]
+document.getElementById("lessonSentence").innerHTML=currentLesson
+speechSynthesis.speak(new SpeechSynthesisUtterance(currentLesson))
+}
+
+function repeatLesson(){
+speechSynthesis.speak(new SpeechSynthesisUtterance(currentLesson))
+}
+
+/* CONVERSATION */
+function startConversation(){
+const recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)()
+recognition.onresult=function(e){
+let text=e.results[0][0].transcript
+let chat=document.getElementById("chat")
+
+chat.innerHTML+=`<div class="chat-user">You: ${text}</div>`
+
+let reply="Nice talking with you!"
+chat.innerHTML+=`<div class="chat-ai">AI: ${reply}</div>`
+
+speechSynthesis.speak(new SpeechSynthesisUtterance(reply))
+}
+recognition.start()
+}
+
+/* EXAM */
+let examSentence=""
+
+function startExam(){
+examSentence="Good morning"
+document.getElementById("examSentence").innerHTML="Say: "+examSentence
+speechSynthesis.speak(new SpeechSynthesisUtterance(examSentence))
+}
+
+function answerExam(){
+const recognition=new(window.SpeechRecognition||window.webkitSpeechRecognition)()
+recognition.onresult=function(e){
+let spoken=e.results[0][0].transcript
+let score=similarity(spoken,examSentence)
+document.getElementById("examScore").innerHTML="Score: "+score+"%"
+updateStats(score)
+}
+recognition.start()
+}
+
+/* DICTIONARY */
+function searchWord(){
+let word=document.getElementById("word").value
+fetch("https://api.dictionaryapi.dev/api/v2/entries/en/"+word)
+.then(res=>res.json())
+.then(data=>{
+if(data.title){
+document.getElementById("meaning").innerHTML="Word not found"
+}else{
+document.getElementById("meaning").innerHTML=data[0].meanings[0].definitions[0].definition
+}
+})
+}
+
+function speakWord(){
+let word=document.getElementById("word").value
+speechSynthesis.speak(new SpeechSynthesisUtterance(word))
+}
+
+/* STATS */
+let total=0
+let scores=[]
+
+function updateStats(score){
+total++
+scores.push(score)
+
+document.getElementById("totalPractice").innerText=total
+
+let avg=Math.floor(scores.reduce((a,b)=>a+b)/scores.length)
+document.getElementById("avgScore").innerText=avg+"%"
+
+let streak=parseInt(localStorage.getItem("streak")||0)+1
+localStorage.setItem("streak",streak)
+document.getElementById("streak").innerText=streak
+}
+
+/* CHART */
+new Chart(document.getElementById("chart"),{
+type:"line",
+data:{
+labels:["Mon","Tue","Wed","Thu","Fri"],
+datasets:[{
+label:"Practice Score",
+data:[60,70,80,75,90],
+borderColor:"#ff6b3d",
+borderWidth:3
+}]
+}
+})
+
+</script>
+
+</body>
+</html>
+
